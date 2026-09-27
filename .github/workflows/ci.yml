@@ -12,8 +12,7 @@ defaults:
 
 env:
   DEBIAN_FRONTEND: noninteractive
-  # main once openocean-software/openocean-messages#1 is merged
-  OPENOCEAN_MESSAGES_REF: claude/admiring-clarke-s2ay8b
+  OPENOCEAN_MESSAGES_REF: main
 
 jobs:
   example:
@@ -46,8 +45,6 @@ jobs:
       - name: Add the ROS 2 apt repository
         if: matrix.example == 'ros'
         run: openocean-messages/.github/ci/add-ros-apt-source.sh
-        env:
-          GH_TOKEN: ${{ github.token }}
       - name: Build and install openocean-messages
         run: |
           openocean-messages/init.sh ${{ matrix.outputs }}
