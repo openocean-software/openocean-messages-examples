@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package example;
+
+import "openocean/messages/navigation.proto";
+
+// Extends openocean.Navigation by wrapping it
+message ContactReport
+{
+    openocean.Navigation nav = 1;
+    string type = 2;
+    optional double length = 3;
+}

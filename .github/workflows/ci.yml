@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  DEBIAN_FRONTEND: noninteractive
+  # main once openocean-software/openocean-messages#1 is merged
+  OPENOCEAN_MESSAGES_REF: claude/admiring-clarke-s2ay8b
+
+jobs:
+  example:
+    name: ${{ matrix.example }}
+    runs-on: ubuntu-latest
+    container: ubuntu:26.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - example: protobuf/cxx
+            outputs: --cxx
+          - example: protobuf/composition
+            outputs: --cxx
+          - example: protobuf/python
+            outputs: --python
+          - example: protobuf/nanopb
+            outputs: --nanopb
+          - example: lcm
+            outputs: --cxx --lcm
+          - example: ros
+            outputs: --ros
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+        with:
+          repository: openocean-software/openocean-messages
+          ref: ${{ env.OPENOCEAN_MESSAGES_REF }}
+          path: openocean-messages
+      - name: Add the ROS 2 apt repository
+        if: matrix.example == 'ros'
+        run: openocean-messages/.github/ci/add-ros-apt-source.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Build and install openocean-messages
+        run: |
+          openocean-messages/init.sh ${{ matrix.outputs }}
+          openocean-messages/build.sh -DBUILD_TESTING=OFF
+          cmake --install openocean-messages/build
+      - name: Build and test the example
+        if: matrix.example != 'ros'
+        run: |
+          cmake -S ${{ matrix.example }} -B build
+          cmake --build build
+          ctest --test-dir build --output-on-failure --no-tests=error
+      - name: Build and run the ROS 2 example
+        if: matrix.example == 'ros'
+        run: |
+          source /opt/ros/*/setup.bash
+          apt-get install -y --no-install-recommends "ros-${ROS_DISTRO}-rclcpp"
+          colcon build --base-paths openocean-messages/build/ros ros --cmake-args -DBUILD_TESTING=OFF
+          source install/setup.bash
+          # Runs until the timeout (exit status 124) unless it fails first
+          timeout 5 install/openocean_example_ros/lib/openocean_example_ros/navigation_publisher || [ $? -eq 124 ]
