@@ -56,7 +56,7 @@ jobs:
       - name: Build and test the example
         if: matrix.example != 'ros'
         run: |
-          cmake -S ${{ matrix.example }} -B build
+          cmake -S ${{ matrix.example }} -B build -G Ninja
           cmake --build build
           ctest --test-dir build --output-on-failure --no-tests=error
       - name: Build and run the ROS 2 example
